@@ -9,7 +9,7 @@ add_definitions(-DPLATFORM_X11_GL -DVERBOSE_BUILD -DVERBOSE_SHADER_BUILD)
 include_directories(
     /usr/include/freetype2
     /usr/include/libdrm
-    ./EdgeUI/source
+    ./EdgeUI/include
 )
 
 add_subdirectory(./EdgeUI)
