@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(EdgeUIExample VERSION 0.1.0)
 
-include(CTest)
-enable_testing()
 
 add_definitions(-DPLATFORM_X11_GL -DVERBOSE_BUILD -DVERBOSE_SHADER_BUILD)
 
@@ -13,8 +11,6 @@ include_directories(
 )
 
 add_subdirectory(./EdgeUI)
-
-
 
 add_executable(EdgeUIExample main.cpp)
 set_property(TARGET EdgeUIExample PROPERTY CXX_STANDARD 17)

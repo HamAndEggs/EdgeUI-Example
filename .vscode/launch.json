@@ -11,10 +11,12 @@
             "program": "${workspaceFolder}/build/EdgeUIExample",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
+            "debugServerArgs": "dir ${workspaceFolder}/source",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
+
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
