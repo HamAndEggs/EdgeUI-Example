@@ -119,11 +119,12 @@ MQTTData::MQTTData(const char* pHost,int pPort,
 
 MQTTData::~MQTTData()
 {
-	mosquitto_destroy(mMQTT);
+    mosquitto_disconnect(mMQTT);
     if( mosquitto_loop_stop(mMQTT,false) != MOSQ_ERR_SUCCESS )
     {
         mosquitto_loop_stop(mMQTT,true);// Force the close.
     }
+	mosquitto_destroy(mMQTT);
 	mosquitto_lib_cleanup();
 }
 
