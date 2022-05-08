@@ -14,8 +14,9 @@
 #include <chrono>
 #include <time.h>
 
-const float CELL_PADDING = 0.03f;
+const float CELL_PADDING = 0.02f;
 const float RECT_RADIUS = 0.2f;
+const float BORDER_SIZE = 3.0f;
 
 static std::map<std::string,std::string> outsideData;
 static std::time_t outsideTemperatureDelivered = 0;
@@ -138,7 +139,7 @@ static void MakeClock(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int 
 
     eui::Style s;
     s.mBackground = eui::COLOUR_BLACK;
-    s.mBorderSize = 5.0f;
+    s.mBorderSize = BORDER_SIZE;
     s.mBorder = eui::COLOUR_WHITE;
     s.mRadius = 0.1f;
     cell->SetStyle(s);
@@ -229,7 +230,7 @@ static void MakeSystemStatus(eui::LayoutGrid* pParent,int pBigFont,int pNormalFo
 
     eui::Style s;
     s.mBackground = eui::COLOUR_BLUE;
-    s.mBorderSize = 5.0f;
+    s.mBorderSize = BORDER_SIZE;
     s.mBorder = eui::COLOUR_WHITE;
     s.mRadius = RECT_RADIUS;
     cell->SetStyle(s);
@@ -302,7 +303,7 @@ void MakeEnvironmentStatus(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont
 
     eui::Style s;
     s.mBackground = eui::COLOUR_DARK_GREEN;
-    s.mBorderSize = 5.0f;
+    s.mBorderSize = BORDER_SIZE;
     s.mBorder = eui::COLOUR_WHITE;
     s.mRadius = RECT_RADIUS;
     cell->SetStyle(s);
@@ -354,7 +355,7 @@ void MakeBitcoinPrice(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int 
 
     eui::Style s;
     s.mBackground = eui::COLOUR_DARK_GREY;
-    s.mBorderSize = 5.0f;
+    s.mBorderSize = BORDER_SIZE;
     s.mBorder = eui::COLOUR_WHITE;
     s.mRadius = RECT_RADIUS;
     s.mAlignment = eui::ALIGN_CENTER_CENTER;
@@ -421,7 +422,7 @@ void MakeWeatherTiles(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int 
 {
     eui::Style s;
     s.mBackground = eui::COLOUR_DARK_GREY;
-    s.mBorderSize = 5.0f;
+    s.mBorderSize = BORDER_SIZE;
     s.mBorder = eui::COLOUR_WHITE;
     s.mRadius = RECT_RADIUS;
     s.mAlignment = eui::ALIGN_CENTER_CENTER;
@@ -501,9 +502,7 @@ int main(int argc, char *argv[])
     int normalFont = graphics->FontLoad("./liberation_serif_font/LiberationSerif-Regular.ttf",35);
     int bigFont = graphics->FontLoad("./liberation_serif_font/LiberationSerif-Bold.ttf",130);
     mainScreen->SetFont(normalFont);
-//    mainScreen->GetStyle().mTexture = graphics->TextureLoadPNG("./bg-pastal-01.png");
-    mainScreen->GetStyle().mBackground = eui::COLOUR_WHITE;
-    mainScreen->GetStyle().mRadius = 0.5f;
+    mainScreen->GetStyle().mTexture = graphics->TextureLoadPNG("./bg-pastal-01.png");
 
     // Use dependency injection to pass events onto the controls.
     // This means that we don't need a circular header dependency that can make it hard to port code.
