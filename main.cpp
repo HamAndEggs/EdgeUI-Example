@@ -145,7 +145,6 @@ static void MakeClock(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int 
     cell->SetStyle(s);
     cell->SetPadding(CELL_PADDING);
 
-
     cell->SetOnUpdate([clock,dayName,dayNumber](eui::Element* pElem)
     {
         std::time_t result = std::time(nullptr);
@@ -530,8 +529,11 @@ int main(int argc, char *argv[])
         outsideTemperatureDelivered = std::time(nullptr);
     });
     
+    float a = 0.0f;
     while( graphics->ProcessSystemEvents(touchEventHandler) )
     {
+        a += 0.01f;
+        const float anim = (sin(a)*0.5f)+0.5f;
 
         mainScreen->Update();
 
