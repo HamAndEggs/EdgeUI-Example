@@ -420,41 +420,44 @@ void MakeBitcoinPrice(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int 
 void MakeWeatherTiles(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int pMiniFont)
 {
     eui::Style s;
-    s.mBackground = eui::COLOUR_DARK_GREY;
+    s.mBackground = eui::MakeColour(0,0,0,160);
     s.mBorderSize = BORDER_SIZE;
     s.mBorder = eui::COLOUR_WHITE;
     s.mRadius = RECT_RADIUS;
     s.mAlignment = eui::ALIGN_CENTER_CENTER;
     for( int n = 0 ; n < 3 ; n++ )
     {
-        eui::LayoutGrid* grid = eui::LayoutGrid::Create(2,1);
+        eui::LayoutGrid *grid = eui::LayoutGrid::Create(2,1);
         grid->SetID("weather:" + std::to_string(n));
         pParent->Attach(n,1,grid);
 
-        eui::Element *icon;
-        icon = eui::Element::Create();
-            icon->SetPadding(0.05f);
-            icon->SetFont(pNormalFont);
-//            icon->SetStyle(s);
-            icon->SetPadding(CELL_PADDING);
-            icon->SetOnUpdate([](eui::Element* pElem)
-            {
-                pElem->GetStyle().mTexture = WeatherIcons["01d"];
-                return true;
-            });
-        grid->Attach(0,0,icon);
+        eui::Element *info,*icon;
 
-        icon = eui::Element::Create();
-            icon->SetPadding(0.05f);
-            icon->SetFont(pNormalFont);
-//            icon->SetStyle(s);
-            icon->SetPadding(CELL_PADDING);
-            icon->SetOnUpdate([](eui::Element* pElem)
-            {
-                pElem->GetStyle().mTexture = WeatherIcons["02d"];
-                return true;
-            });
-        grid->Attach(1,0,icon);
+        info = eui::Element::Create();
+            info->SetStyle(s);
+            info->SetPadding(CELL_PADDING);
+            icon = eui::Element::Create();
+                icon->SetPadding(0.05f);
+                icon->SetOnUpdate([](eui::Element* pElem)
+                {
+                    pElem->GetStyle().mTexture = WeatherIcons["01d"];
+                    return true;
+                });
+            info->Attach(icon);
+        grid->Attach(0,0,info);
+
+        info = eui::Element::Create();
+            info->SetStyle(s);
+            info->SetPadding(CELL_PADDING);
+            icon = eui::Element::Create();
+                icon->SetPadding(0.05f);
+                icon->SetOnUpdate([](eui::Element* pElem)
+                {
+                    pElem->GetStyle().mTexture = WeatherIcons["02d"];
+                    return true;
+                });
+            info->Attach(icon);
+        grid->Attach(1,0,info);
     }
 }
 
@@ -484,6 +487,7 @@ static void LoadWeatherIcons(eui::Graphics* graphics)
 
     for( std::string f : files )
     {
+//        WeatherIcons[f] = graphics->TextureLoadPNG("TestImage.png");
         WeatherIcons[f] = graphics->TextureLoadPNG("./icons/" + f + ".png");
     }
 }
