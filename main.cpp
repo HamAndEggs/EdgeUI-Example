@@ -517,7 +517,7 @@ public:
         LoadWeatherIcons(graphics);
 
         root = eui::LayoutGrid::Create(3,1);
-        root->SetEventHandler(this);
+        root->SetExtension(this);
 
         eui::Style s;
         s.mBackground = eui::MakeColour(200,200,200,160);
