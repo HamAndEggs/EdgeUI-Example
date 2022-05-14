@@ -28,7 +28,7 @@ static int CURLWriter(char *data, size_t size, size_t nmemb,std::string *writerD
     return size * nmemb;
 }
 
-class TheClock : public eui::ElementEvents
+class TheClock : public eui::ElementExtension
 {
     eui::Element* root = nullptr;
     eui::Element* clock = nullptr;
@@ -42,7 +42,7 @@ public:
     {
         root = eui::Element::Create();
         root->SetID("clock");
-        root->SetEventHandler(this);
+        root->SetExtension(this);
 
         eui::Style s;
         s.mBackground = eui::COLOUR_BLACK;
@@ -110,7 +110,7 @@ public:
     }
 };
 
-class SystemStatus : public eui::ElementEvents
+class SystemStatus : public eui::ElementExtension
 {
     eui::Element* root;
     eui::Element* uptime;
@@ -128,7 +128,7 @@ public:
     {
         root = eui::Element::Create();
         root->SetID("system status");
-        root->SetEventHandler(this);
+        root->SetExtension(this);
 
         uptime = eui::Element::Create();
             uptime->SetPadding(0.05f);
@@ -212,7 +212,7 @@ public:
     }
 };
 
-class EnvironmentStatus : public eui::ElementEvents
+class EnvironmentStatus : public eui::ElementExtension
 {
     eui::Element *root;
     eui::Element *eCO2,*tOC,*outsideTemp;
@@ -249,7 +249,7 @@ public:
         root->SetID("environment status");
         root->SetStyle(s);
         root->SetPadding(CELL_PADDING);
-        root->SetEventHandler(this);
+        root->SetExtension(this);
 
         eCO2 = eui::Element::Create();
             eCO2->SetPadding(0.05f);
@@ -314,7 +314,7 @@ public:
     }
 };
 
-class BitcoinPrice : public eui::ElementEvents
+class BitcoinPrice : public eui::ElementExtension
 {
     eui::LayoutGrid *root = nullptr;
 
@@ -372,7 +372,7 @@ public:
     {
         root = eui::LayoutGrid::Create(2,2);
         root->SetID("bitcoin");
-        root->SetEventHandler(this);
+        root->SetExtension(this);
 
         eui::Style s;
         s.mBackground = eui::COLOUR_DARK_GREY;
@@ -464,7 +464,7 @@ public:
 
 };
 
-class WeatherTiles : public eui::ElementEvents
+class WeatherTiles : public eui::ElementExtension
 {
     eui::LayoutGrid *root;
     eui::Element* icons[6];
