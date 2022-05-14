@@ -18,11 +18,6 @@ const float CELL_PADDING = 0.02f;
 const float RECT_RADIUS = 0.2f;
 const float BORDER_SIZE = 3.0f;
 
-static std::map<std::string,std::string> outsideData;
-static std::time_t outsideTemperatureDelivered = 0;
-static i2c::SGP30 indoorAirQuality;
-static std::map<std::string,uint32_t>WeatherIcons;
-
 static int CURLWriter(char *data, size_t size, size_t nmemb,std::string *writerData)
 {
     if(writerData == NULL)
@@ -33,119 +28,50 @@ static int CURLWriter(char *data, size_t size, size_t nmemb,std::string *writerD
     return size * nmemb;
 }
 
-class FetchBitcoinPrice
+class TheClock : public eui::ElementEvents
 {
+    eui::Element* root = nullptr;
+    eui::Element* clock = nullptr;
+    eui::Element* dayName = nullptr;
+    eui::Element* dayNumber = nullptr;
+
 public:
-    FetchBitcoinPrice()
-    {
-        mPriceUpdater.Tick(60*10,[this]()
-        {
-            std::string jsonData;
-            try
-            {
-                const std::string url = "https://cex.io/api/ticker/BTC/GBP";
-                if( DownloadReport(url,jsonData) )
-                {
-                    // We got it, now we need to build the weather object from the json.
-                    // I would have used rapid json but that is a lot of files to add to this project.
-                    // My intention is for someone to beable to drop these two files into their project and continue.
-                    // And so I will make my own json reader, it's easy but not the best solution.
-                    tinyjson::JsonProcessor json(jsonData);
-                    const tinyjson::JsonValue price = json.GetRoot();
+    operator eui::Element*(){return root;}
 
-                    mLastPrice = (int)std::stoi(price["last"].GetString());
-                    mPriceChange = (int)std::stoi(price["priceChange"].GetString());
-                    m24HourLow = (int)std::stoi(price["low"].GetString());
-                    m24HourHigh = (int)std::stoi(price["high"].GetString());
-                }
-            }
-            catch(std::runtime_error &e)
-            {
-                std::cerr << "Failed to download bitcoin price: " << e.what() << "\n";
-            }
-        });
+    TheClock(int pBigFont,int pNormalFont,int pMiniFont)
+    {
+        root = eui::Element::Create();
+        root->SetID("clock");
+        root->SetEventHandler(this);
+
+        eui::Style s;
+        s.mBackground = eui::COLOUR_BLACK;
+        s.mBorderSize = BORDER_SIZE;
+        s.mBorder = eui::COLOUR_WHITE;
+        s.mRadius = 0.1f;
+        root->SetStyle(s);
+        root->SetPadding(CELL_PADDING);
+
+        clock = eui::Element::Create();
+            clock->SetPadding(0.05f);
+            clock->GetStyle().mAlignment = eui::ALIGN_CENTER_TOP;
+            clock->SetFont(pBigFont);
+        root->Attach(clock);
+
+        dayName = eui::Element::Create();
+            dayName->SetPadding(0.05f);
+            dayName->GetStyle().mAlignment = eui::ALIGN_LEFT_BOTTOM;
+            dayName->SetFont(pNormalFont);
+        root->Attach(dayName);
+
+        dayNumber = eui::Element::Create();
+            dayNumber->SetPadding(0.05f);
+            dayNumber->GetStyle().mAlignment = eui::ALIGN_RIGHT_BOTTOM;
+            dayNumber->SetFont(pNormalFont);
+        root->Attach(dayNumber);
     }
 
-    ~FetchBitcoinPrice()
-    {
-        mPriceUpdater.TellThreadToExitAndWait();
-    }
-
-    int mLastPrice = 0;
-    int mPriceChange = 0;
-    int m24HourLow = 0;
-    int m24HourHigh = 0;
-
-private:
-    tinytools::threading::SleepableThread  mPriceUpdater;
-
-    bool DownloadReport(const std::string& pURL,std::string& rJson)const
-    {
-        bool result = false;
-        CURL *curl = curl_easy_init();
-        if(curl)
-        {
-            char errorBuffer[CURL_ERROR_SIZE];
-            errorBuffer[0] = 0;
-            if( curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer) == CURLE_OK )
-            {
-                if( curl_easy_setopt(curl, CURLOPT_URL, pURL.c_str()) == CURLE_OK )
-                {
-                    if( curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CURLWriter) == CURLE_OK )
-                    {
-                        if( curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rJson) == CURLE_OK )
-                        {
-                            if( curl_easy_perform(curl) == CURLE_OK )
-                            {
-                                result = true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            /* always cleanup */ 
-            curl_easy_cleanup(curl);
-        }
-
-        return result;
-    }
-};
-static FetchBitcoinPrice BitcoinPrice;
-
-static void MakeClock(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int pMiniFont)
-{
-    eui::Element* cell = eui::Element::Create();
-    cell->SetID("clock");
-    pParent->Attach(0,0,cell);
-
-    eui::Element* clock = eui::Element::Create();
-        clock->SetPadding(0.05f);
-        clock->GetStyle().mAlignment = eui::ALIGN_CENTER_TOP;
-        clock->SetFont(pBigFont);
-    cell->Attach(clock);
-
-    eui::Element* dayName = eui::Element::Create();
-        dayName->SetPadding(0.05f);
-        dayName->GetStyle().mAlignment = eui::ALIGN_LEFT_BOTTOM;
-        dayName->SetFont(pNormalFont);
-    cell->Attach(dayName);
-
-    eui::Element* dayNumber = eui::Element::Create();
-        dayNumber->SetPadding(0.05f);
-        dayNumber->GetStyle().mAlignment = eui::ALIGN_RIGHT_BOTTOM;
-        dayNumber->SetFont(pNormalFont);
-    cell->Attach(dayNumber);
-
-    eui::Style s;
-    s.mBackground = eui::COLOUR_BLACK;
-    s.mBorderSize = BORDER_SIZE;
-    s.mBorder = eui::COLOUR_WHITE;
-    s.mRadius = 0.1f;
-    cell->SetStyle(s);
-    cell->SetPadding(CELL_PADDING);
-
-    cell->SetOnUpdate([clock,dayName,dayNumber](eui::Element* pElem)
+    virtual bool OnUpdate(eui::Element* pElement)
     {
         std::time_t result = std::time(nullptr);
         tm *currentTime = localtime(&result);
@@ -181,65 +107,78 @@ static void MakeClock(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int 
             dayNumber->SetText("NO DAY");
         }
         return true;
-    });
-}
+    }
+};
 
-static void MakeSystemStatus(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int pMiniFont)
+class SystemStatus : public eui::ElementEvents
 {
-    eui::Element* cell = eui::Element::Create();
-    cell->SetID("system status");
-    pParent->Attach(0,0,cell);
+    eui::Element* root;
+    eui::Element* uptime;
+    eui::Element* localIP;
+    eui::Element* hostName;
+    eui::Element* cpuLoad;
+    eui::Element* ramUsed;
 
-    static std::map<int,tinytools::system::CPULoadTracking> trackingData;
+    std::map<int,tinytools::system::CPULoadTracking> trackingData;
 
-    eui::Element* uptime = eui::Element::Create();
-        uptime->SetPadding(0.05f);
-        uptime->GetStyle().mAlignment = eui::ALIGN_CENTER_TOP;
-        uptime->SetFont(pNormalFont);
-        uptime->SetText("UP: XX:XX:XX");
-    cell->Attach(uptime);
+public:
+    operator eui::Element*(){return root;}
 
-    eui::Element* localIP = eui::Element::Create();
-        localIP->SetPadding(0.05f);
-        localIP->GetStyle().mAlignment = eui::ALIGN_LEFT_CENTER;
-        localIP->SetFont(pMiniFont);
-        localIP->SetText("XX.XX.XX.XX");
-    cell->Attach(localIP);
+    SystemStatus(int pBigFont,int pNormalFont,int pMiniFont)
+    {
+        root = eui::Element::Create();
+        root->SetID("system status");
+        root->SetEventHandler(this);
 
-    eui::Element* hostName = eui::Element::Create();
-        hostName->SetPadding(0.05f);
-        hostName->GetStyle().mAlignment = eui::ALIGN_RIGHT_CENTER;
-        hostName->SetFont(pMiniFont);
-        hostName->SetText("--------");
-    cell->Attach(hostName);
+        uptime = eui::Element::Create();
+            uptime->SetPadding(0.05f);
+            uptime->GetStyle().mAlignment = eui::ALIGN_CENTER_TOP;
+            uptime->SetFont(pNormalFont);
+            uptime->SetText("UP: XX:XX:XX");
+        root->Attach(uptime);
 
-    eui::Element* cpuLoad = eui::Element::Create();
-        cpuLoad->SetPadding(0.05f);
-        cpuLoad->GetStyle().mAlignment = eui::ALIGN_LEFT_BOTTOM;
-        cpuLoad->SetFont(pMiniFont);
-        cpuLoad->SetText("XX.XX.XX.XX");
-    cell->Attach(cpuLoad);
+        localIP = eui::Element::Create();
+            localIP->SetPadding(0.05f);
+            localIP->GetStyle().mAlignment = eui::ALIGN_LEFT_CENTER;
+            localIP->SetFont(pMiniFont);
+            localIP->SetText("XX.XX.XX.XX");
+        root->Attach(localIP);
 
-    eui::Element* ramUsed = eui::Element::Create();
-        ramUsed->SetPadding(0.05f);
-        ramUsed->GetStyle().mAlignment = eui::ALIGN_RIGHT_BOTTOM;
-        ramUsed->SetFont(pMiniFont);
-        ramUsed->SetText("--------");
-    cell->Attach(ramUsed);
+        hostName = eui::Element::Create();
+            hostName->SetPadding(0.05f);
+            hostName->GetStyle().mAlignment = eui::ALIGN_RIGHT_CENTER;
+            hostName->SetFont(pMiniFont);
+            hostName->SetText("--------");
+        root->Attach(hostName);
 
-    eui::Style s;
-    s.mBackground = eui::COLOUR_BLUE;
-    s.mBorderSize = BORDER_SIZE;
-    s.mBorder = eui::COLOUR_WHITE;
-    s.mRadius = RECT_RADIUS;
-    cell->SetStyle(s);
-    cell->SetPadding(CELL_PADDING);
+        cpuLoad = eui::Element::Create();
+            cpuLoad->SetPadding(0.05f);
+            cpuLoad->GetStyle().mAlignment = eui::ALIGN_LEFT_BOTTOM;
+            cpuLoad->SetFont(pMiniFont);
+            cpuLoad->SetText("XX.XX.XX.XX");
+        root->Attach(cpuLoad);
 
-    std::map<int,int> CPULoads;
-    int totalSystemLoad;
-    tinytools::system::GetCPULoad(trackingData,totalSystemLoad,CPULoads);
+        ramUsed = eui::Element::Create();
+            ramUsed->SetPadding(0.05f);
+            ramUsed->GetStyle().mAlignment = eui::ALIGN_RIGHT_BOTTOM;
+            ramUsed->SetFont(pMiniFont);
+            ramUsed->SetText("--------");
+        root->Attach(ramUsed);
 
-    cell->SetOnUpdate([uptime,localIP,hostName,cpuLoad,ramUsed](eui::Element* pElem)
+        eui::Style s;
+        s.mBackground = eui::COLOUR_BLUE;
+        s.mBorderSize = BORDER_SIZE;
+        s.mBorder = eui::COLOUR_WHITE;
+        s.mRadius = RECT_RADIUS;
+        root->SetStyle(s);
+        root->SetPadding(CELL_PADDING);
+
+        std::map<int,int> CPULoads;
+        int totalSystemLoad;
+        tinytools::system::GetCPULoad(trackingData,totalSystemLoad,CPULoads);
+    }
+
+    virtual bool OnUpdate(eui::Element* pElement)
     {
     // Render the uptime
         uint64_t upDays,upHours,upMinutes;
@@ -270,59 +209,83 @@ static void MakeSystemStatus(eui::LayoutGrid* pParent,int pBigFont,int pNormalFo
             ramUsed->SetText(memory);
         }
         return true;
-    });
-}
+    }
+};
 
-void MakeEnvironmentStatus(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int pMiniFont)
+class EnvironmentStatus : public eui::ElementEvents
 {
-    eui::Element* cell = eui::Element::Create();
-    cell->SetID("environment status");
-    pParent->Attach(0,1,cell);
-
-    eui::Element* eCO2 = eui::Element::Create();
-        eCO2->SetPadding(0.05f);
-        eCO2->GetStyle().mAlignment = eui::ALIGN_CENTER_TOP;
-        eCO2->SetFont(pNormalFont);
-        eCO2->SetText("UP: XX:XX:XX");
-    cell->Attach(eCO2);
-    
-    eui::Element* tOC = eui::Element::Create();
-        tOC->SetPadding(0.05f);
-        tOC->GetStyle().mAlignment = eui::ALIGN_CENTER_CENTER;
-        tOC->SetFont(pNormalFont);
-        tOC->SetText("XX.XX.XX.XX");
-    cell->Attach(tOC);
-
-    eui::Element* outsideTemp = eui::Element::Create();
-        outsideTemp->SetPadding(0.05f);
-        outsideTemp->GetStyle().mAlignment = eui::ALIGN_CENTER_BOTTOM;
-        outsideTemp->SetFont(pNormalFont);
-        outsideTemp->SetText("XX.XC");
-    cell->Attach(outsideTemp);
-
-    eui::Style s;
-    s.mBackground = eui::COLOUR_DARK_GREEN;
-    s.mBorderSize = BORDER_SIZE;
-    s.mBorder = eui::COLOUR_WHITE;
-    s.mRadius = RECT_RADIUS;
-    cell->SetStyle(s);
-    cell->SetPadding(CELL_PADDING);
-
+    eui::Element *root;
+    eui::Element *eCO2,*tOC,*outsideTemp;
+    i2c::SGP30 indoorAirQuality;
     uint16_t mECO2 = 0;
     uint16_t mTVOC = 0;
     int mResult = i2c::SGP30::READING_RESULT_WARM_UP;
+    std::map<std::string,std::string> outsideData;
+    std::time_t outsideTemperatureDelivered = 0;
 
-    indoorAirQuality.Start([&mECO2,&mTVOC,&mResult](int pResult,uint16_t pECO2,uint16_t pTVOC)
+    // MQTT data
+    const std::vector<std::string>& topics = {"/outside/temperature","/outside/hartbeat"};
+    MQTTData OutsideWeather;
+
+public:
+    operator eui::Element*(){return root;}
+
+    EnvironmentStatus(int pBigFont,int pNormalFont,int pMiniFont) : 
+        OutsideWeather("server",1883,topics,
+            [this](const std::string &pTopic,const std::string &pData)
+            {
+                outsideData[pTopic] = pData;
+                outsideTemperatureDelivered = std::time(nullptr);
+            })
     {
-        mResult = pResult;
-        if( pResult == i2c::SGP30::READING_RESULT_VALID )
+
+        eui::Style s;
+        s.mBackground = eui::COLOUR_DARK_GREEN;
+        s.mBorderSize = BORDER_SIZE;
+        s.mBorder = eui::COLOUR_WHITE;
+        s.mRadius = RECT_RADIUS;
+
+        root = eui::Element::Create();
+        root->SetID("environment status");
+        root->SetStyle(s);
+        root->SetPadding(CELL_PADDING);
+        root->SetEventHandler(this);
+
+        eCO2 = eui::Element::Create();
+            eCO2->SetPadding(0.05f);
+            eCO2->GetStyle().mAlignment = eui::ALIGN_CENTER_TOP;
+            eCO2->SetFont(pNormalFont);
+            eCO2->SetText("UP: XX:XX:XX");
+        root->Attach(eCO2);
+        
+        tOC = eui::Element::Create();
+            tOC->SetPadding(0.05f);
+            tOC->GetStyle().mAlignment = eui::ALIGN_CENTER_CENTER;
+            tOC->SetFont(pNormalFont);
+            tOC->SetText("XX.XX.XX.XX");
+        root->Attach(tOC);
+
+        outsideTemp = eui::Element::Create();
+            outsideTemp->SetPadding(0.05f);
+            outsideTemp->GetStyle().mAlignment = eui::ALIGN_CENTER_BOTTOM;
+            outsideTemp->SetFont(pNormalFont);
+            outsideTemp->SetText("XX.XC");
+        root->Attach(outsideTemp);
+
+        indoorAirQuality.Start([this](int pResult,uint16_t pECO2,uint16_t pTVOC)
         {
-            mECO2 = pECO2;
-            mTVOC = pTVOC;
-        }
-    });
-    outsideData["/outside/temperature"] = "Waiting";// Make sure there is data.
-    cell->SetOnUpdate([eCO2,tOC,outsideTemp,mECO2,mTVOC,mResult](eui::Element* pElem)
+            mResult = pResult;
+            if( pResult == i2c::SGP30::READING_RESULT_VALID )
+            {
+                mECO2 = pECO2;
+                mTVOC = pTVOC;
+            }
+        });
+
+        outsideData["/outside/temperature"] = "Waiting";// Make sure there is data.
+    }
+
+    virtual bool OnUpdate(eui::Element* pElement)
     {
         outsideTemp->SetText("Outside: " + outsideData["/outside/temperature"]);
         switch (mResult)
@@ -343,126 +306,173 @@ void MakeEnvironmentStatus(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont
             break;
         }
         return true;
-    });
-}
-
-void MakeBitcoinPrice(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int pMiniFont)
-{
-    eui::LayoutGrid* grid = eui::LayoutGrid::Create(2,2);
-    grid->SetID("bitcoin");
-    pParent->Attach(1,0,grid);
-
-    eui::Style s;
-    s.mBackground = eui::COLOUR_DARK_GREY;
-    s.mBorderSize = BORDER_SIZE;
-    s.mBorder = eui::COLOUR_WHITE;
-    s.mRadius = RECT_RADIUS;
-    s.mAlignment = eui::ALIGN_CENTER_CENTER;
-
-    eui::Element* cell;
-    cell = eui::Element::Create();
-        cell->SetPadding(0.05f);
-        cell->SetFont(pNormalFont);
-        cell->SetText("£XXXXXX");
-        cell->SetStyle(s);
-        cell->SetPadding(CELL_PADDING);
-        cell->SetOnUpdate([](eui::Element* pElem)
-        {
-            pElem->SetTextF("£%d",BitcoinPrice.mLastPrice);
-            return true;
-        });
-    grid->Attach(0,0,cell);
-
-    cell = eui::Element::Create();
-        cell->SetPadding(0.05f);
-        cell->SetFont(pNormalFont);
-        cell->SetText("+XXXXXX");
-        cell->SetStyle(s);
-        cell->SetPadding(CELL_PADDING);
-        cell->SetOnUpdate([](eui::Element* pElem)
-        {
-            std::string growth = std::to_string(BitcoinPrice.mPriceChange);
-            if( BitcoinPrice.mPriceChange > 0 )
-                growth = "+" + growth;
-
-            pElem->SetText(growth);
-            return true;
-        });
-    grid->Attach(1,0,cell);
-
-    cell = eui::Element::Create();
-        cell->SetPadding(0.05f);
-        cell->SetFont(pNormalFont);
-        cell->SetText("+XXXXXX");
-        cell->SetStyle(s);
-        cell->SetPadding(CELL_PADDING);
-        cell->SetOnUpdate([](eui::Element* pElem)
-        {
-            pElem->SetTextF("£%d",BitcoinPrice.m24HourHigh);
-            return true;
-        });
-    grid->Attach(0,1,cell);
-
-    cell = eui::Element::Create();
-        cell->SetPadding(0.05f);
-        cell->SetFont(pNormalFont);
-        cell->SetText("£XXXXXX");
-        cell->SetStyle(s);
-        cell->SetPadding(CELL_PADDING);
-        cell->SetOnUpdate([](eui::Element* pElem)
-        {
-            pElem->SetTextF("£%d",BitcoinPrice.m24HourLow);
-            return true;
-        });
-    grid->Attach(1,1,cell);
-}
-
-void MakeWeatherTiles(eui::LayoutGrid* pParent,int pBigFont,int pNormalFont,int pMiniFont)
-{
-    eui::Style s;
-    s.mBackground = eui::MakeColour(0,0,0,160);
-    s.mBorderSize = BORDER_SIZE;
-    s.mBorder = eui::COLOUR_WHITE;
-    s.mRadius = RECT_RADIUS;
-    s.mAlignment = eui::ALIGN_CENTER_CENTER;
-    for( int n = 0 ; n < 3 ; n++ )
-    {
-        eui::LayoutGrid *grid = eui::LayoutGrid::Create(2,1);
-        grid->SetID("weather:" + std::to_string(n));
-        pParent->Attach(n,1,grid);
-
-        eui::Element *info,*icon;
-
-        info = eui::Element::Create();
-            info->SetStyle(s);
-            info->SetPadding(CELL_PADDING);
-            icon = eui::Element::Create();
-                icon->SetPadding(0.05f);
-                icon->SetOnUpdate([](eui::Element* pElem)
-                {
-                    pElem->GetStyle().mTexture = WeatherIcons["01d"];
-                    return true;
-                });
-            info->Attach(icon);
-        grid->Attach(0,0,info);
-
-        info = eui::Element::Create();
-            info->SetStyle(s);
-            info->SetPadding(CELL_PADDING);
-            icon = eui::Element::Create();
-                icon->SetPadding(0.05f);
-                icon->SetOnUpdate([](eui::Element* pElem)
-                {
-                    pElem->GetStyle().mTexture = WeatherIcons["02d"];
-                    return true;
-                });
-            info->Attach(icon);
-        grid->Attach(1,0,info);
     }
-}
 
-static void LoadWeatherIcons(eui::Graphics* graphics)
+    ~EnvironmentStatus()
+    {
+        indoorAirQuality.Stop();
+    }
+};
+
+class BitcoinPrice : public eui::ElementEvents
 {
+    eui::LayoutGrid *root = nullptr;
+
+    int mLastPrice = 0;
+    int mPriceChange = 0;
+    int m24HourLow = 0;
+    int m24HourHigh = 0;
+
+    struct
+    {
+        eui::Element* LastPrice;
+        eui::Element* PriceChange;
+        eui::Element* Low;
+        eui::Element* High;
+    }mControls;
+
+    tinytools::threading::SleepableThread  mPriceUpdater;
+
+    bool DownloadReport(const std::string& pURL,std::string& rJson)const
+    {
+        bool result = false;
+        CURL *curl = curl_easy_init();
+        if(curl)
+        {
+            char errorBuffer[CURL_ERROR_SIZE];
+            errorBuffer[0] = 0;
+            if( curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer) == CURLE_OK )
+            {
+                if( curl_easy_setopt(curl, CURLOPT_URL, pURL.c_str()) == CURLE_OK )
+                {
+                    if( curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CURLWriter) == CURLE_OK )
+                    {
+                        if( curl_easy_setopt(curl, CURLOPT_WRITEDATA, &rJson) == CURLE_OK )
+                        {
+                            if( curl_easy_perform(curl) == CURLE_OK )
+                            {
+                                result = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            /* always cleanup */ 
+            curl_easy_cleanup(curl);
+        }
+
+        return result;
+    }
+
+public:
+    operator eui::Element*(){return root;}
+
+    BitcoinPrice(int pBigFont,int pNormalFont,int pMiniFont)
+    {
+        root = eui::LayoutGrid::Create(2,2);
+        root->SetID("bitcoin");
+        root->SetEventHandler(this);
+
+        eui::Style s;
+        s.mBackground = eui::COLOUR_DARK_GREY;
+        s.mBorderSize = BORDER_SIZE;
+        s.mBorder = eui::COLOUR_WHITE;
+        s.mRadius = RECT_RADIUS;
+        s.mAlignment = eui::ALIGN_CENTER_CENTER;
+
+        mControls.LastPrice = eui::Element::Create();
+            mControls.LastPrice->SetPadding(0.05f);
+            mControls.LastPrice->SetFont(pNormalFont);
+            mControls.LastPrice->SetText("£XXXXXX");
+            mControls.LastPrice->SetStyle(s);
+            mControls.LastPrice->SetPadding(CELL_PADDING);
+        root->Attach(mControls.LastPrice,0,0);
+
+        mControls.PriceChange = eui::Element::Create();
+            mControls.PriceChange->SetPadding(0.05f);
+            mControls.PriceChange->SetFont(pNormalFont);
+            mControls.PriceChange->SetText("+XXXXXX");
+            mControls.PriceChange->SetStyle(s);
+            mControls.PriceChange->SetPadding(CELL_PADDING);
+        root->Attach(mControls.PriceChange,0,1);
+
+        mControls.High = eui::Element::Create();
+            mControls.High->SetPadding(0.05f);
+            mControls.High->SetFont(pNormalFont);
+            mControls.High->SetText("+XXXXXX");
+            mControls.High->SetStyle(s);
+            mControls.High->SetPadding(CELL_PADDING);
+        root->Attach(mControls.High,1,0);
+
+        mControls.Low = eui::Element::Create();
+            mControls.Low->SetPadding(0.05f);
+            mControls.Low->SetFont(pNormalFont);
+            mControls.Low->SetText("£XXXXXX");
+            mControls.Low->SetStyle(s);
+            mControls.Low->SetPadding(CELL_PADDING);
+        root->Attach(mControls.Low,1,1);
+
+        mPriceUpdater.Tick(60*10,[this]()
+        {
+            std::string jsonData;
+            try
+            {
+                const std::string url = "https://cex.io/api/ticker/BTC/GBP";
+                if( DownloadReport(url,jsonData) )
+                {
+                    // We got it, now we need to build the weather object from the json.
+                    // I would have used rapid json but that is a lot of files to add to this project.
+                    // My intention is for someone to beable to drop these two files into their project and continue.
+                    // And so I will make my own json reader, it's easy but not the best solution.
+                    tinyjson::JsonProcessor json(jsonData);
+                    const tinyjson::JsonValue price = json.GetRoot();
+
+                    mLastPrice = (int)std::stoi(price["last"].GetString());
+                    mPriceChange = (int)std::stoi(price["priceChange"].GetString());
+                    m24HourLow = (int)std::stoi(price["low"].GetString());
+                    m24HourHigh = (int)std::stoi(price["high"].GetString());
+                }
+            }
+            catch(std::runtime_error &e)
+            {
+                std::cerr << "Failed to download bitcoin price: " << e.what() << "\n";
+            }
+        });
+
+    }
+
+    ~BitcoinPrice()
+    {
+        mPriceUpdater.TellThreadToExitAndWait();
+    }
+
+    virtual bool OnUpdate(eui::Element* pElement)
+    {
+        mControls.LastPrice->SetTextF("£%d",mLastPrice);
+
+        std::string growth = std::to_string(mPriceChange);
+        if( mPriceChange > 0 )
+            growth = "+" + growth;
+
+        mControls.PriceChange->SetText(growth);
+
+        mControls.High->SetTextF("£%d",m24HourHigh);
+        mControls.Low->SetTextF("£%d",m24HourLow);
+        return true;
+    }
+
+};
+
+class WeatherTiles : public eui::ElementEvents
+{
+    eui::LayoutGrid *root;
+    eui::Element* icons[6];
+    int tick = 0;
+    float anim = 0;
+
+    std::map<std::string,uint32_t>WeatherIcons;
+
     const std::vector<std::string> files =
     {
         "01d",
@@ -485,18 +495,100 @@ static void LoadWeatherIcons(eui::Graphics* graphics)
         "50n",
     }; 
 
-    for( std::string f : files )
+    void LoadWeatherIcons(eui::Graphics* graphics)
     {
-//        WeatherIcons[f] = graphics->TextureLoadPNG("TestImage.png");
-        WeatherIcons[f] = graphics->TextureLoadPNG("./icons/" + f + ".png");
+        for( std::string f : files )
+        {
+            WeatherIcons[f] = graphics->TextureLoadPNG("./icons/" + f + ".png");
+        }
     }
-}
+
+    uint32_t GetRandomIcon()
+    {
+        return WeatherIcons[files[rand()%files.size()]];
+    }
+
+
+public:
+    operator eui::Element*(){return root;}
+
+    WeatherTiles(eui::Graphics* graphics,int pBigFont,int pNormalFont,int pMiniFont)
+    {
+        LoadWeatherIcons(graphics);
+
+        root = eui::LayoutGrid::Create(3,1);
+        root->SetEventHandler(this);
+
+        eui::Style s;
+        s.mBackground = eui::MakeColour(200,200,200,160);
+        s.mBorderSize = BORDER_SIZE;
+        s.mBorder = eui::COLOUR_WHITE;
+        s.mRadius = RECT_RADIUS;
+        s.mAlignment = eui::ALIGN_CENTER_CENTER;
+        eui::Element **icon = icons;
+        for( int n = 0 ; n < 3 ; n++, icon += 2 )
+        {
+            eui::LayoutGrid *grid = eui::LayoutGrid::Create(2,1);
+            grid->SetID("weather:" + std::to_string(n));
+            root->Attach(grid,n,0);
+
+            eui::Element *info;
+
+            info = eui::Element::Create();
+                info->SetStyle(s);
+                info->SetPadding(CELL_PADDING);
+                icon[0] = eui::Element::Create();
+                icon[0]->SetPadding(0.05f);
+                info->Attach(icon[0]);
+            grid->Attach(info,0,0);
+
+            info = eui::Element::Create();
+                info->SetStyle(s);
+                info->SetPadding(CELL_PADDING);
+                icon[1] = eui::Element::Create();
+                icon[1]->SetPadding(0.05f);
+                info->Attach(icon[1]);
+            grid->Attach(info,1,0);
+        }
+    }
+
+    virtual bool OnUpdate(eui::Element* pElement)
+    {
+        tick++;
+        if( tick > 60 )
+        {
+            tick = 0;
+            for(int n = 0 ; n < 6 ; n++ )
+            {
+                icons[n]->GetStyle().mTexture = GetRandomIcon();
+            }
+        }
+
+        anim += 0.1f;
+        if( anim > eui::GetRadian() )
+            anim -= eui::GetRadian();
+
+        for(int n = 0 ; n < 6 ; n++ )
+        {
+            float Y = sin(anim + (n * 0.7f)) * 0.05f;
+            eui::Rectangle r;
+            r.left = 0.05f;
+            r.right = 1.0f - 0.05f;
+
+            r.top = 0.05f + Y;
+            r.bottom = (1.0f - 0.05f) + Y;
+
+            icons[n]->SetPadding(r);
+        }
+
+        return true;
+    }
+};
 
 int main(int argc, char *argv[])
 {
     eui::Graphics* graphics = eui::Graphics::Open();
 //    graphics->FontSetMaximumAllowedGlyph(256);
-    LoadWeatherIcons(graphics);
 
     eui::LayoutGrid* mainScreen = eui::LayoutGrid::Create(3,3);
     mainScreen->SetID("mainScreen");
@@ -515,23 +607,14 @@ int main(int argc, char *argv[])
         return mainScreen->TouchEvent(pX,pY,pTouched);
     };
 
-    MakeClock(mainScreen,bigFont,normalFont,miniFont);
-    MakeBitcoinPrice(mainScreen,bigFont,normalFont,miniFont);
-    MakeWeatherTiles(mainScreen,bigFont,normalFont,miniFont);
+    mainScreen->Attach(*(new TheClock(bigFont,normalFont,miniFont)),0,0);
+    mainScreen->Attach(*(new BitcoinPrice(bigFont,normalFont,miniFont)),1,0);
+    mainScreen->Attach(*(new WeatherTiles(graphics,bigFont,normalFont,miniFont)),0,1,3,1);
 
     eui::LayoutGrid* status = eui::LayoutGrid::Create(1,2);
-    mainScreen->Attach(2,0,status);
-    MakeSystemStatus(status,bigFont,normalFont,miniFont);
-    MakeEnvironmentStatus(status,bigFont,normalFont,miniFont);
-
-
-    // MQTT data
-    const std::vector<std::string>& topics = {"/outside/temperature","/outside/hartbeat"};
-    MQTTData MQTT("server",1883,topics,[](const std::string &pTopic,const std::string &pData)
-    {
-        outsideData[pTopic] = pData;
-        outsideTemperatureDelivered = std::time(nullptr);
-    });
+    mainScreen->Attach(status,2,0);
+    status->Attach(*(new SystemStatus(bigFont,normalFont,miniFont)),0,0);
+    status->Attach(*(new EnvironmentStatus(bigFont,normalFont,miniFont)),0,1);
     
     float a = 0.0f;
     while( graphics->ProcessSystemEvents(touchEventHandler) )
@@ -548,7 +631,6 @@ int main(int argc, char *argv[])
         graphics->EndFrame();
     }
 
-    indoorAirQuality.Stop();
     delete mainScreen;
     eui::Graphics::Close();
 }
