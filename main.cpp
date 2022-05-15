@@ -625,5 +625,6 @@ int main(int argc, char *argv[])
 
         graphics->EndFrame();
     }
+    delete mainScreen;
     eui::Graphics::Close();
 }
