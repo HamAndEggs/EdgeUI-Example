@@ -1,7 +1,6 @@
 
 #include "Graphics.h"
 #include "Element.h"
-#include "LayoutGrid.h"
 #include "TinyTools.h"
 #include "sgp30.h"
 #include "MQTTData.h"
@@ -43,6 +42,7 @@ public:
         root = eui::Element::Create();
         root->SetID("clock");
         root->SetExtension(this);
+        root->SetPos(0,0);
 
         eui::Style s;
         s.mBackground = eui::COLOUR_BLACK;
@@ -129,6 +129,7 @@ public:
         root = eui::Element::Create();
         root->SetID("system status");
         root->SetExtension(this);
+        root->SetPos(0,0);
 
         uptime = eui::Element::Create();
             uptime->SetPadding(0.05f);
@@ -245,11 +246,12 @@ public:
         s.mBorder = eui::COLOUR_WHITE;
         s.mRadius = RECT_RADIUS;
 
-        root = eui::Element::Create();
+        root = eui::Element::Create(s);
         root->SetID("environment status");
-        root->SetStyle(s);
         root->SetPadding(CELL_PADDING);
         root->SetExtension(this);
+        root->SetPos(0,1);
+
 
         eCO2 = eui::Element::Create();
             eCO2->SetPadding(0.05f);
@@ -316,7 +318,7 @@ public:
 
 class BitcoinPrice : public eui::ElementExtension
 {
-    eui::LayoutGrid *root = nullptr;
+    eui::Element *root = nullptr;
 
     int mLastPrice = 0;
     int mPriceChange = 0;
@@ -370,9 +372,11 @@ public:
 
     BitcoinPrice(int pBigFont,int pNormalFont,int pMiniFont)
     {
-        root = eui::LayoutGrid::Create(2,2);
+        root = eui::Element::Create();
         root->SetID("bitcoin");
         root->SetExtension(this);
+        root->SetPos(1,0);
+        root->SetGrid(2,2);
 
         eui::Style s;
         s.mBackground = eui::COLOUR_DARK_GREY;
@@ -381,37 +385,37 @@ public:
         s.mRadius = RECT_RADIUS;
         s.mAlignment = eui::ALIGN_CENTER_CENTER;
 
-        mControls.LastPrice = eui::Element::Create();
+        mControls.LastPrice = eui::Element::Create(s);
             mControls.LastPrice->SetPadding(0.05f);
             mControls.LastPrice->SetFont(pNormalFont);
             mControls.LastPrice->SetText("£XXXXXX");
-            mControls.LastPrice->SetStyle(s);
             mControls.LastPrice->SetPadding(CELL_PADDING);
-        root->Attach(mControls.LastPrice,0,0);
+            mControls.LastPrice->SetPos(0,0);
+        root->Attach(mControls.LastPrice);
 
-        mControls.PriceChange = eui::Element::Create();
+        mControls.PriceChange = eui::Element::Create(s);
             mControls.PriceChange->SetPadding(0.05f);
             mControls.PriceChange->SetFont(pNormalFont);
             mControls.PriceChange->SetText("+XXXXXX");
-            mControls.PriceChange->SetStyle(s);
             mControls.PriceChange->SetPadding(CELL_PADDING);
-        root->Attach(mControls.PriceChange,0,1);
+            mControls.PriceChange->SetPos(0,1);
+        root->Attach(mControls.PriceChange);
 
-        mControls.High = eui::Element::Create();
+        mControls.High = eui::Element::Create(s);
             mControls.High->SetPadding(0.05f);
             mControls.High->SetFont(pNormalFont);
             mControls.High->SetText("+XXXXXX");
-            mControls.High->SetStyle(s);
             mControls.High->SetPadding(CELL_PADDING);
-        root->Attach(mControls.High,1,0);
+            mControls.High->SetPos(1,0);
+        root->Attach(mControls.High);
 
-        mControls.Low = eui::Element::Create();
+        mControls.Low = eui::Element::Create(s);
             mControls.Low->SetPadding(0.05f);
             mControls.Low->SetFont(pNormalFont);
             mControls.Low->SetText("£XXXXXX");
-            mControls.Low->SetStyle(s);
             mControls.Low->SetPadding(CELL_PADDING);
-        root->Attach(mControls.Low,1,1);
+            mControls.Low->SetPos(1,1);
+        root->Attach(mControls.Low);
 
         mPriceUpdater.Tick(60*10,[this]()
         {
@@ -439,7 +443,6 @@ public:
                 std::cerr << "Failed to download bitcoin price: " << e.what() << "\n";
             }
         });
-
     }
 
     ~BitcoinPrice()
@@ -466,7 +469,7 @@ public:
 
 class WeatherTiles : public eui::ElementExtension
 {
-    eui::LayoutGrid *root;
+    eui::Element *root;
     eui::Element* icons[6];
     int tick = 0;
     float anim = 0;
@@ -516,39 +519,28 @@ public:
     {
         LoadWeatherIcons(graphics);
 
-        root = eui::LayoutGrid::Create(3,1);
+        root = eui::Element::Create();
         root->SetExtension(this);
-
+        root->SetPos(0,1);
+        root->SetGrid(6,1);
+        root->SetSpan(3,1);
+        
         eui::Style s;
         s.mBackground = eui::MakeColour(200,200,200,160);
         s.mBorderSize = BORDER_SIZE;
         s.mBorder = eui::COLOUR_WHITE;
         s.mRadius = RECT_RADIUS;
         s.mAlignment = eui::ALIGN_CENTER_CENTER;
-        eui::Element **icon = icons;
-        for( int n = 0 ; n < 3 ; n++, icon += 2 )
+        for( int n = 0 ; n < 6 ; n++ )
         {
-            eui::LayoutGrid *grid = eui::LayoutGrid::Create(2,1);
-            grid->SetID("weather:" + std::to_string(n));
-            root->Attach(grid,n,0);
-
-            eui::Element *info;
-
-            info = eui::Element::Create();
+            eui::Element *info = eui::Element::Create();
                 info->SetStyle(s);
                 info->SetPadding(CELL_PADDING);
-                icon[0] = eui::Element::Create();
-                icon[0]->SetPadding(0.05f);
-                info->Attach(icon[0]);
-            grid->Attach(info,0,0);
-
-            info = eui::Element::Create();
-                info->SetStyle(s);
-                info->SetPadding(CELL_PADDING);
-                icon[1] = eui::Element::Create();
-                icon[1]->SetPadding(0.05f);
-                info->Attach(icon[1]);
-            grid->Attach(info,1,0);
+                icons[n] = eui::Element::Create();
+                icons[n]->SetPadding(0.05f);
+                info->Attach(icons[n]);
+                info->SetPos(n,0);
+            root->Attach(info);
         }
     }
 
@@ -590,8 +582,9 @@ int main(int argc, char *argv[])
     eui::Graphics* graphics = eui::Graphics::Open();
 //    graphics->FontSetMaximumAllowedGlyph(256);
 
-    eui::LayoutGrid* mainScreen = eui::LayoutGrid::Create(3,3);
+    eui::Element* mainScreen = eui::Element::Create();
     mainScreen->SetID("mainScreen");
+    mainScreen->SetGrid(3,3);
 
     int miniFont = graphics->FontLoad("./liberation_serif_font/LiberationSerif-Regular.ttf",20);
     int normalFont = graphics->FontLoad("./liberation_serif_font/LiberationSerif-Regular.ttf",35);
@@ -607,14 +600,16 @@ int main(int argc, char *argv[])
         return mainScreen->TouchEvent(pX,pY,pTouched);
     };
 
-    mainScreen->Attach(*(new TheClock(bigFont,normalFont,miniFont)),0,0);
-    mainScreen->Attach(*(new BitcoinPrice(bigFont,normalFont,miniFont)),1,0);
-    mainScreen->Attach(*(new WeatherTiles(graphics,bigFont,normalFont,miniFont)),0,1,3,1);
+    mainScreen->Attach(*(new TheClock(bigFont,normalFont,miniFont)));
+    mainScreen->Attach(*(new BitcoinPrice(bigFont,normalFont,miniFont)));
+    mainScreen->Attach(*(new WeatherTiles(graphics,bigFont,normalFont,miniFont)));
 
-    eui::LayoutGrid* status = eui::LayoutGrid::Create(1,2);
-    mainScreen->Attach(status,2,0);
-    status->Attach(*(new SystemStatus(bigFont,normalFont,miniFont)),0,0);
-    status->Attach(*(new EnvironmentStatus(bigFont,normalFont,miniFont)),0,1);
+    eui::Element* status = eui::Element::Create();
+    status->SetGrid(1,2);
+    status->SetPos(2,0);
+    mainScreen->Attach(status);
+    status->Attach(*(new SystemStatus(bigFont,normalFont,miniFont)));
+    status->Attach(*(new EnvironmentStatus(bigFont,normalFont,miniFont)));
     
     float a = 0.0f;
     while( graphics->ProcessSystemEvents(touchEventHandler) )
