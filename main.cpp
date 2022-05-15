@@ -29,13 +29,13 @@ static int CURLWriter(char *data, size_t size, size_t nmemb,std::string *writerD
 
 class TheClock : public eui::ElementExtension
 {
-    eui::Element* root = nullptr;
-    eui::Element* clock = nullptr;
-    eui::Element* dayName = nullptr;
-    eui::Element* dayNumber = nullptr;
+    eui::ElementPtr root = nullptr;
+    eui::ElementPtr clock = nullptr;
+    eui::ElementPtr dayName = nullptr;
+    eui::ElementPtr dayNumber = nullptr;
 
 public:
-    operator eui::Element*(){return root;}
+    operator eui::ElementPtr(){return root;}
 
     TheClock(int pBigFont,int pNormalFont,int pMiniFont)
     {
@@ -71,7 +71,7 @@ public:
         root->Attach(dayNumber);
     }
 
-    virtual bool OnUpdate(eui::Element* pElement)
+    virtual bool OnUpdate(eui::ElementPtr pElement)
     {
         std::time_t result = std::time(nullptr);
         tm *currentTime = localtime(&result);
@@ -112,17 +112,17 @@ public:
 
 class SystemStatus : public eui::ElementExtension
 {
-    eui::Element* root;
-    eui::Element* uptime;
-    eui::Element* localIP;
-    eui::Element* hostName;
-    eui::Element* cpuLoad;
-    eui::Element* ramUsed;
+    eui::ElementPtr root;
+    eui::ElementPtr uptime;
+    eui::ElementPtr localIP;
+    eui::ElementPtr hostName;
+    eui::ElementPtr cpuLoad;
+    eui::ElementPtr ramUsed;
 
     std::map<int,tinytools::system::CPULoadTracking> trackingData;
 
 public:
-    operator eui::Element*(){return root;}
+    operator eui::ElementPtr(){return root;}
 
     SystemStatus(int pBigFont,int pNormalFont,int pMiniFont)
     {
@@ -179,7 +179,7 @@ public:
         tinytools::system::GetCPULoad(trackingData,totalSystemLoad,CPULoads);
     }
 
-    virtual bool OnUpdate(eui::Element* pElement)
+    virtual bool OnUpdate(eui::ElementPtr pElement)
     {
     // Render the uptime
         uint64_t upDays,upHours,upMinutes;
@@ -215,8 +215,8 @@ public:
 
 class EnvironmentStatus : public eui::ElementExtension
 {
-    eui::Element *root;
-    eui::Element *eCO2,*tOC,*outsideTemp;
+    eui::ElementPtr root;
+    eui::ElementPtr eCO2,tOC,outsideTemp;
     i2c::SGP30 indoorAirQuality;
     uint16_t mECO2 = 0;
     uint16_t mTVOC = 0;
@@ -229,7 +229,7 @@ class EnvironmentStatus : public eui::ElementExtension
     MQTTData OutsideWeather;
 
 public:
-    operator eui::Element*(){return root;}
+    operator eui::ElementPtr(){return root;}
 
     EnvironmentStatus(int pBigFont,int pNormalFont,int pMiniFont) : 
         OutsideWeather("server",1883,topics,
@@ -287,7 +287,7 @@ public:
         outsideData["/outside/temperature"] = "Waiting";// Make sure there is data.
     }
 
-    virtual bool OnUpdate(eui::Element* pElement)
+    virtual bool OnUpdate(eui::ElementPtr pElement)
     {
         outsideTemp->SetText("Outside: " + outsideData["/outside/temperature"]);
         switch (mResult)
@@ -318,7 +318,7 @@ public:
 
 class BitcoinPrice : public eui::ElementExtension
 {
-    eui::Element *root = nullptr;
+    eui::ElementPtr root;
 
     int mLastPrice = 0;
     int mPriceChange = 0;
@@ -327,10 +327,10 @@ class BitcoinPrice : public eui::ElementExtension
 
     struct
     {
-        eui::Element* LastPrice;
-        eui::Element* PriceChange;
-        eui::Element* Low;
-        eui::Element* High;
+        eui::ElementPtr LastPrice;
+        eui::ElementPtr PriceChange;
+        eui::ElementPtr Low;
+        eui::ElementPtr High;
     }mControls;
 
     tinytools::threading::SleepableThread  mPriceUpdater;
@@ -368,7 +368,7 @@ class BitcoinPrice : public eui::ElementExtension
     }
 
 public:
-    operator eui::Element*(){return root;}
+    operator eui::ElementPtr(){return root;}
 
     BitcoinPrice(int pBigFont,int pNormalFont,int pMiniFont)
     {
@@ -450,7 +450,7 @@ public:
         mPriceUpdater.TellThreadToExitAndWait();
     }
 
-    virtual bool OnUpdate(eui::Element* pElement)
+    virtual bool OnUpdate(eui::ElementPtr pElement)
     {
         mControls.LastPrice->SetTextF("£%d",mLastPrice);
 
@@ -469,8 +469,8 @@ public:
 
 class WeatherTiles : public eui::ElementExtension
 {
-    eui::Element *root;
-    eui::Element* icons[6];
+    eui::ElementPtr root;
+    eui::ElementPtr icons[6];
     int tick = 0;
     float anim = 0;
 
@@ -513,7 +513,7 @@ class WeatherTiles : public eui::ElementExtension
 
 
 public:
-    operator eui::Element*(){return root;}
+    operator eui::ElementPtr(){return root;}
 
     WeatherTiles(eui::Graphics* graphics,int pBigFont,int pNormalFont,int pMiniFont)
     {
@@ -533,7 +533,7 @@ public:
         s.mAlignment = eui::ALIGN_CENTER_CENTER;
         for( int n = 0 ; n < 6 ; n++ )
         {
-            eui::Element *info = eui::Element::Create();
+            eui::ElementPtr info = eui::Element::Create();
                 info->SetStyle(s);
                 info->SetPadding(CELL_PADDING);
                 icons[n] = eui::Element::Create();
@@ -544,7 +544,7 @@ public:
         }
     }
 
-    virtual bool OnUpdate(eui::Element* pElement)
+    virtual bool OnUpdate(eui::ElementPtr pElement)
     {
         tick++;
         if( tick > 60 )
@@ -582,7 +582,7 @@ int main(int argc, char *argv[])
     eui::Graphics* graphics = eui::Graphics::Open();
 //    graphics->FontSetMaximumAllowedGlyph(256);
 
-    eui::Element* mainScreen = eui::Element::Create();
+    eui::ElementPtr mainScreen = eui::Element::Create();
     mainScreen->SetID("mainScreen");
     mainScreen->SetGrid(3,3);
 
@@ -604,7 +604,7 @@ int main(int argc, char *argv[])
     mainScreen->Attach(*(new BitcoinPrice(bigFont,normalFont,miniFont)));
     mainScreen->Attach(*(new WeatherTiles(graphics,bigFont,normalFont,miniFont)));
 
-    eui::Element* status = eui::Element::Create();
+    eui::ElementPtr status = eui::Element::Create();
     status->SetGrid(1,2);
     status->SetPos(2,0);
     mainScreen->Attach(status);
@@ -625,7 +625,5 @@ int main(int argc, char *argv[])
 
         graphics->EndFrame();
     }
-
-    delete mainScreen;
     eui::Graphics::Close();
 }
