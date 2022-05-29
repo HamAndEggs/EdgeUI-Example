@@ -553,6 +553,7 @@ public:
             for(int n = 0 ; n < 6 ; n++ )
             {
                 icons[n]->GetStyle().mTexture = GetRandomIcon();
+                icons[n]->GetStyle().mBackground = eui::COLOUR_WHITE;
             }
         }
 
@@ -591,6 +592,7 @@ int main(int argc, char *argv[])
     int bigFont = graphics->FontLoad("./liberation_serif_font/LiberationSerif-Bold.ttf",130);
     mainScreen->SetFont(normalFont);
     mainScreen->GetStyle().mTexture = graphics->TextureLoadPNG("./bg-pastal-01.png");
+    mainScreen->GetStyle().mBackground = eui::COLOUR_WHITE;
 
     // Use dependency injection to pass events onto the controls.
     // This means that we don't need a circular header dependency that can make it hard to port code.
@@ -610,6 +612,22 @@ int main(int argc, char *argv[])
     mainScreen->Attach(status);
     status->Attach(*(new SystemStatus(bigFont,normalFont,miniFont)));
     status->Attach(*(new EnvironmentStatus(bigFont,normalFont,miniFont)));
+
+    eui::Style buttonStyle;
+        buttonStyle.mBackground = eui::COLOUR_WHITE;
+        buttonStyle.mTexture = graphics->TextureLoadPNG("button-gradient.png");
+        buttonStyle.mBorderSize = 3.0f;
+        buttonStyle.mBorder = eui::MakeColour(255,255,255,200);
+        buttonStyle.mBoarderStyle = eui::Style::BS_RAISED;
+        buttonStyle.mRadius = RECT_RADIUS;
+        buttonStyle.mAlignment = eui::ALIGN_CENTER_CENTER;
+
+    eui::ElementPtr button1 = eui::Element::Create();
+        button1->SetPos(0,2);
+        button1->SetStyle(buttonStyle);
+        button1->SetPadding(0.3f);
+        button1->SetText("Exit");
+    mainScreen->Attach(button1);
     
     float a = 0.0f;
     while( graphics->ProcessSystemEvents(touchEventHandler) )
