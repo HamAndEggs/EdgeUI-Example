@@ -27,51 +27,47 @@ static int CURLWriter(char *data, size_t size, size_t nmemb,std::string *writerD
     return size * nmemb;
 }
 
-class TheClock : public eui::ElementExtension
+class TheClock : public eui::Element
 {
-    eui::ElementPtr root = nullptr;
     eui::ElementPtr clock = nullptr;
     eui::ElementPtr dayName = nullptr;
     eui::ElementPtr dayNumber = nullptr;
 
 public:
-    operator eui::ElementPtr(){return root;}
 
     TheClock(int pBigFont,int pNormalFont,int pMiniFont)
     {
-        root = eui::Element::Create();
-        root->SetID("clock");
-        root->SetExtension(this);
-        root->SetPos(0,0);
+        this->SetID("clock");
+        this->SetPos(0,0);
 
         eui::Style s;
         s.mBackground = eui::COLOUR_BLACK;
         s.mBorderSize = BORDER_SIZE;
         s.mBorder = eui::COLOUR_WHITE;
         s.mRadius = 0.1f;
-        root->SetStyle(s);
-        root->SetPadding(CELL_PADDING);
+        this->SetStyle(s);
+        this->SetPadding(CELL_PADDING);
 
         clock = eui::Element::Create();
             clock->SetPadding(0.05f);
             clock->GetStyle().mAlignment = eui::ALIGN_CENTER_TOP;
             clock->SetFont(pBigFont);
-        root->Attach(clock);
+        this->Attach(clock);
 
         dayName = eui::Element::Create();
             dayName->SetPadding(0.05f);
             dayName->GetStyle().mAlignment = eui::ALIGN_LEFT_BOTTOM;
             dayName->SetFont(pNormalFont);
-        root->Attach(dayName);
+        this->Attach(dayName);
 
         dayNumber = eui::Element::Create();
             dayNumber->SetPadding(0.05f);
             dayNumber->GetStyle().mAlignment = eui::ALIGN_RIGHT_BOTTOM;
             dayNumber->SetFont(pNormalFont);
-        root->Attach(dayNumber);
+        this->Attach(dayNumber);
     }
 
-    virtual bool OnUpdate(eui::ElementPtr pElement)
+    virtual bool OnUpdate()
     {
         std::time_t result = std::time(nullptr);
         tm *currentTime = localtime(&result);
@@ -110,9 +106,8 @@ public:
     }
 };
 
-class SystemStatus : public eui::ElementExtension
+class SystemStatus : public eui::Element
 {
-    eui::ElementPtr root;
     eui::ElementPtr uptime;
     eui::ElementPtr localIP;
     eui::ElementPtr hostName;
@@ -122,64 +117,61 @@ class SystemStatus : public eui::ElementExtension
     std::map<int,tinytools::system::CPULoadTracking> trackingData;
 
 public:
-    operator eui::ElementPtr(){return root;}
 
     SystemStatus(int pBigFont,int pNormalFont,int pMiniFont)
     {
-        root = eui::Element::Create();
-        root->SetID("system status");
-        root->SetExtension(this);
-        root->SetPos(0,0);
+        this->SetID("system status");
+        this->SetPos(0,0);
 
         uptime = eui::Element::Create();
             uptime->SetPadding(0.05f);
             uptime->GetStyle().mAlignment = eui::ALIGN_CENTER_TOP;
             uptime->SetFont(pNormalFont);
             uptime->SetText("UP: XX:XX:XX");
-        root->Attach(uptime);
+        this->Attach(uptime);
 
         localIP = eui::Element::Create();
             localIP->SetPadding(0.05f);
             localIP->GetStyle().mAlignment = eui::ALIGN_LEFT_CENTER;
             localIP->SetFont(pMiniFont);
             localIP->SetText("XX.XX.XX.XX");
-        root->Attach(localIP);
+        this->Attach(localIP);
 
         hostName = eui::Element::Create();
             hostName->SetPadding(0.05f);
             hostName->GetStyle().mAlignment = eui::ALIGN_RIGHT_CENTER;
             hostName->SetFont(pMiniFont);
             hostName->SetText("--------");
-        root->Attach(hostName);
+        this->Attach(hostName);
 
         cpuLoad = eui::Element::Create();
             cpuLoad->SetPadding(0.05f);
             cpuLoad->GetStyle().mAlignment = eui::ALIGN_LEFT_BOTTOM;
             cpuLoad->SetFont(pMiniFont);
             cpuLoad->SetText("XX.XX.XX.XX");
-        root->Attach(cpuLoad);
+        this->Attach(cpuLoad);
 
         ramUsed = eui::Element::Create();
             ramUsed->SetPadding(0.05f);
             ramUsed->GetStyle().mAlignment = eui::ALIGN_RIGHT_BOTTOM;
             ramUsed->SetFont(pMiniFont);
             ramUsed->SetText("--------");
-        root->Attach(ramUsed);
+        this->Attach(ramUsed);
 
         eui::Style s;
         s.mBackground = eui::COLOUR_BLUE;
         s.mBorderSize = BORDER_SIZE;
         s.mBorder = eui::COLOUR_WHITE;
         s.mRadius = RECT_RADIUS;
-        root->SetStyle(s);
-        root->SetPadding(CELL_PADDING);
+        this->SetStyle(s);
+        this->SetPadding(CELL_PADDING);
 
         std::map<int,int> CPULoads;
         int totalSystemLoad;
         tinytools::system::GetCPULoad(trackingData,totalSystemLoad,CPULoads);
     }
 
-    virtual bool OnUpdate(eui::ElementPtr pElement)
+    virtual bool OnUpdate()
     {
     // Render the uptime
         uint64_t upDays,upHours,upMinutes;
@@ -213,9 +205,8 @@ public:
     }
 };
 
-class EnvironmentStatus : public eui::ElementExtension
+class EnvironmentStatus : public eui::Element
 {
-    eui::ElementPtr root;
     eui::ElementPtr eCO2,tOC,outsideTemp;
     i2c::SGP30 indoorAirQuality;
     uint16_t mECO2 = 0;
@@ -229,7 +220,6 @@ class EnvironmentStatus : public eui::ElementExtension
     MQTTData OutsideWeather;
 
 public:
-    operator eui::ElementPtr(){return root;}
 
     EnvironmentStatus(int pBigFont,int pNormalFont,int pMiniFont) : 
         OutsideWeather("server",1883,topics,
@@ -246,11 +236,9 @@ public:
         s.mBorder = eui::COLOUR_WHITE;
         s.mRadius = RECT_RADIUS;
 
-        root = eui::Element::Create(s);
-        root->SetID("environment status");
-        root->SetPadding(CELL_PADDING);
-        root->SetExtension(this);
-        root->SetPos(0,1);
+        this->SetID("environment status");
+        this->SetPadding(CELL_PADDING);
+        this->SetPos(0,1);
 
 
         eCO2 = eui::Element::Create();
@@ -258,21 +246,21 @@ public:
             eCO2->GetStyle().mAlignment = eui::ALIGN_CENTER_TOP;
             eCO2->SetFont(pNormalFont);
             eCO2->SetText("UP: XX:XX:XX");
-        root->Attach(eCO2);
+        this->Attach(eCO2);
         
         tOC = eui::Element::Create();
             tOC->SetPadding(0.05f);
             tOC->GetStyle().mAlignment = eui::ALIGN_CENTER_CENTER;
             tOC->SetFont(pNormalFont);
             tOC->SetText("XX.XX.XX.XX");
-        root->Attach(tOC);
+        this->Attach(tOC);
 
         outsideTemp = eui::Element::Create();
             outsideTemp->SetPadding(0.05f);
             outsideTemp->GetStyle().mAlignment = eui::ALIGN_CENTER_BOTTOM;
             outsideTemp->SetFont(pNormalFont);
             outsideTemp->SetText("XX.XC");
-        root->Attach(outsideTemp);
+        this->Attach(outsideTemp);
 
         indoorAirQuality.Start([this](int pResult,uint16_t pECO2,uint16_t pTVOC)
         {
@@ -287,7 +275,7 @@ public:
         outsideData["/outside/temperature"] = "Waiting";// Make sure there is data.
     }
 
-    virtual bool OnUpdate(eui::ElementPtr pElement)
+    virtual bool OnUpdate()
     {
         outsideTemp->SetText("Outside: " + outsideData["/outside/temperature"]);
         switch (mResult)
@@ -316,9 +304,8 @@ public:
     }
 };
 
-class BitcoinPrice : public eui::ElementExtension
+class BitcoinPrice : public eui::Element
 {
-    eui::ElementPtr root;
 
     int mLastPrice = 0;
     int mPriceChange = 0;
@@ -368,15 +355,12 @@ class BitcoinPrice : public eui::ElementExtension
     }
 
 public:
-    operator eui::ElementPtr(){return root;}
 
     BitcoinPrice(int pBigFont,int pNormalFont,int pMiniFont)
     {
-        root = eui::Element::Create();
-        root->SetID("bitcoin");
-        root->SetExtension(this);
-        root->SetPos(1,0);
-        root->SetGrid(2,2);
+        this->SetID("bitcoin");
+        this->SetPos(1,0);
+        this->SetGrid(2,2);
 
         eui::Style s;
         s.mBackground = eui::COLOUR_DARK_GREY;
@@ -391,7 +375,7 @@ public:
             mControls.LastPrice->SetText("£XXXXXX");
             mControls.LastPrice->SetPadding(CELL_PADDING);
             mControls.LastPrice->SetPos(0,0);
-        root->Attach(mControls.LastPrice);
+        this->Attach(mControls.LastPrice);
 
         mControls.PriceChange = eui::Element::Create(s);
             mControls.PriceChange->SetPadding(0.05f);
@@ -399,7 +383,7 @@ public:
             mControls.PriceChange->SetText("+XXXXXX");
             mControls.PriceChange->SetPadding(CELL_PADDING);
             mControls.PriceChange->SetPos(0,1);
-        root->Attach(mControls.PriceChange);
+        this->Attach(mControls.PriceChange);
 
         mControls.High = eui::Element::Create(s);
             mControls.High->SetPadding(0.05f);
@@ -407,7 +391,7 @@ public:
             mControls.High->SetText("+XXXXXX");
             mControls.High->SetPadding(CELL_PADDING);
             mControls.High->SetPos(1,0);
-        root->Attach(mControls.High);
+        this->Attach(mControls.High);
 
         mControls.Low = eui::Element::Create(s);
             mControls.Low->SetPadding(0.05f);
@@ -415,7 +399,7 @@ public:
             mControls.Low->SetText("£XXXXXX");
             mControls.Low->SetPadding(CELL_PADDING);
             mControls.Low->SetPos(1,1);
-        root->Attach(mControls.Low);
+        this->Attach(mControls.Low);
 
         mPriceUpdater.Tick(60*10,[this]()
         {
@@ -450,7 +434,7 @@ public:
         mPriceUpdater.TellThreadToExitAndWait();
     }
 
-    virtual bool OnUpdate(eui::ElementPtr pElement)
+    virtual bool OnUpdate()
     {
         mControls.LastPrice->SetTextF("£%d",mLastPrice);
 
@@ -467,9 +451,8 @@ public:
 
 };
 
-class WeatherTiles : public eui::ElementExtension
+class WeatherTiles : public eui::Element
 {
-    eui::ElementPtr root;
     eui::ElementPtr icons[6];
     int tick = 0;
     float anim = 0;
@@ -513,17 +496,14 @@ class WeatherTiles : public eui::ElementExtension
 
 
 public:
-    operator eui::ElementPtr(){return root;}
 
     WeatherTiles(eui::Graphics* graphics,int pBigFont,int pNormalFont,int pMiniFont)
     {
         LoadWeatherIcons(graphics);
 
-        root = eui::Element::Create();
-        root->SetExtension(this);
-        root->SetPos(0,1);
-        root->SetGrid(6,1);
-        root->SetSpan(3,1);
+        this->SetPos(0,1);
+        this->SetGrid(6,1);
+        this->SetSpan(3,1);
         
         eui::Style s;
         s.mBackground = eui::MakeColour(200,200,200,160);
@@ -540,11 +520,11 @@ public:
                 icons[n]->SetPadding(0.05f);
                 info->Attach(icons[n]);
                 info->SetPos(n,0);
-            root->Attach(info);
+            this->Attach(info);
         }
     }
 
-    virtual bool OnUpdate(eui::ElementPtr pElement)
+    virtual bool OnUpdate()
     {
         tick++;
         if( tick > 60 )
@@ -602,16 +582,16 @@ int main(int argc, char *argv[])
         return mainScreen->TouchEvent(pX,pY,pTouched);
     };
 
-    mainScreen->Attach(*(new TheClock(bigFont,normalFont,miniFont)));
-    mainScreen->Attach(*(new BitcoinPrice(bigFont,normalFont,miniFont)));
-    mainScreen->Attach(*(new WeatherTiles(graphics,bigFont,normalFont,miniFont)));
+    mainScreen->Attach(new TheClock(bigFont,normalFont,miniFont));
+    mainScreen->Attach(new BitcoinPrice(bigFont,normalFont,miniFont));
+    mainScreen->Attach(new WeatherTiles(graphics,bigFont,normalFont,miniFont));
 
     eui::ElementPtr status = eui::Element::Create();
     status->SetGrid(1,2);
     status->SetPos(2,0);
     mainScreen->Attach(status);
-    status->Attach(*(new SystemStatus(bigFont,normalFont,miniFont)));
-    status->Attach(*(new EnvironmentStatus(bigFont,normalFont,miniFont)));
+    status->Attach(new SystemStatus(bigFont,normalFont,miniFont));
+    status->Attach(new EnvironmentStatus(bigFont,normalFont,miniFont));
 
     eui::Style buttonStyle;
         buttonStyle.mBackground = eui::COLOUR_WHITE;
@@ -627,6 +607,18 @@ int main(int argc, char *argv[])
         button1->SetStyle(buttonStyle);
         button1->SetPadding(0.3f);
         button1->SetText("Exit");
+        button1->SetTouched([](eui::ElementPtr pElement,float pLocalX,float pLocalY,bool pTouched)
+        {
+            if( pTouched )
+            {
+                pElement->GetStyle().mBoarderStyle = eui::Style::BS_DEPRESSED;
+            }
+            else
+            {
+                pElement->GetStyle().mBoarderStyle = eui::Style::BS_RAISED;
+            }
+            return true;
+        });
     mainScreen->Attach(button1);
     
     float a = 0.0f;
