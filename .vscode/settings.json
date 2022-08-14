@@ -60,5 +60,8 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp"
     },
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "C_Cpp.default.includePath": [
+        "./EdgeUi/Include"
+    ]
 }
