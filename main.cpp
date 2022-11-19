@@ -17,9 +17,7 @@
 #include "Style.h"
 #include "Graphics.h"
 #include "Element.h"
-#include "controls/Button.h"
-#include "controls/CheckBox.h"
-#include "controls/RadioButton.h"
+#include "controls/Controls.h"
 #include "Application.h"
 
 #include <unistd.h>
@@ -42,11 +40,13 @@ private:
     const float BORDER_SIZE = 3.0f;
     const std::string mPath;
     bool mAnimate = false;
+    bool mAnimateImage = false;
     eui::ElementPtr mRoot = nullptr;
 
     eui::ElementPtr MakeBouncyIcon(eui::Graphics* pGraphics);
     eui::ElementPtr MakeOptions(int pFont);
     eui::ElementPtr MakeRadio(int pFont);
+    eui::ElementPtr MakeFruit();
 
     uint32_t banana = 0;
     uint32_t cherry = 0;
@@ -87,24 +87,24 @@ void MyUI::OnOpen(eui::Graphics* pGraphics)
     mRoot->GetStyle().mTexture = pGraphics->TextureLoadPNG(mPath + "TestImage.png");
     mRoot->GetStyle().mBackground = eui::COLOUR_WHITE;
  
-    mRoot->Attach((new eui::Button("QUIT",largeFont))->SetOnTouched([this](eui::ElementPtr pElement,float pLocalX,float pLocalY,bool pTouched)
-    {
-        if( pTouched == false )
-        {
-            SetExit();
-        }
-        return true;
-    })->SetPadding(0.05f));
+    mRoot->Attach((new eui::Button("QUIT",largeFont,[this](){SetExit();}))->SetPadding(0.05f));
+
+    mRoot->Attach(
+            (new eui::Button("Animate Fruit",normalFont,eui::COLOUR_LIGHT_GREY,2.0f,0.01f,[this](){mAnimateImage = true;},[this](){mAnimateImage = false;}))
+            ->SetPadding(0.05f,0.3f)->SetPos(2,1));
 
     mRoot->Attach(MakeBouncyIcon(pGraphics)->SetPos(1,0));
     mRoot->Attach(MakeOptions(miniFont)->SetPos(2,0));
     mRoot->Attach(MakeRadio(miniFont)->SetPos(0,1));
+    mRoot->Attach(MakeFruit()->SetPos(1,1)->SetPadding(0.04f));
 
-    mRoot->Attach((new eui::Element)->SetOnUpdate([this](eui::ElementPtr e)
+    mRoot->Attach((new eui::Slider(0,100,1))->SetPos(0,2));
+
+    mRoot->Attach((new eui::Element)->SetPos(1,2)->SetPadding(0.04f)->SetOnDraw([](eui::ElementPtr pElement,eui::Graphics* pGraphics,const eui::Rectangle& pContentRect)
     {
-        e->GetStyle().mTexture = mCurrentImage;
+        pGraphics->DrawLine(pContentRect.GetCenterX(),pContentRect.GetCenterY(),pContentRect.right,pContentRect.bottom,eui::COLOUR_BLACK,3);
         return true;
-    })->SetPos(1,1)->SetPadding(0.04f));
+    }));
 
 }
 
@@ -119,7 +119,7 @@ eui::ElementPtr MyUI::MakeBouncyIcon(eui::Graphics* pGraphics)
     eui::Style s;
     s.mTexture = pGraphics->TextureLoadPNG("./icons/02d.png",true);
 
-    return (new eui::Element(s))->SetOnUpdate([this](eui::ElementPtr e)
+    return (new eui::Element(s))->SetOnUpdate([this](eui::ElementPtr e,const eui::Rectangle& pContentRect)
     {
         if( mAnimate )
         {
@@ -131,7 +131,6 @@ eui::ElementPtr MyUI::MakeBouncyIcon(eui::Graphics* pGraphics)
             // Play around with the padding to make it move.
             e->SetPadding(0.0f,1.0f,y,1.0f - (0.2f - y));
         }
-
         return true;
     });
 }
@@ -163,14 +162,31 @@ eui::ElementPtr MyUI::MakeRadio(int pFont)
     group->Add("Cherry",cherry);
     group->Add("Grapes",grapes);
     group->Add("Orange",orange);
-    group->SetOnPressed([this](eui::RadioButtonPtr pButton,uint32_t pIndex)
-    {
-        mCurrentImage = pIndex;
-    });
+    group->Bind(&mCurrentImage);
 
     group->SetPressed(banana);
 
     return group;
+}
+
+eui::ElementPtr MyUI::MakeFruit()
+{
+    return (new eui::Element)->SetOnUpdate([this](eui::ElementPtr e,const eui::Rectangle& pContentRect)
+    {
+        if( mAnimateImage )
+        {
+            static float anim = 0.0f;
+
+            anim += 0.1f;
+
+            float y = (std::sin(anim)+1.0f) * 0.1f;
+            // Play around with the padding to make it move.
+            e->SetPadding(0.0f,1.0f,y,1.0f - (0.2f - y));
+        }
+
+        e->GetStyle().mTexture = mCurrentImage;
+        return true;
+    });
 }
 
 int main(const int argc,const char *argv[])
@@ -184,6 +200,9 @@ int main(const int argc,const char *argv[])
             path += '/';
     }
 
+    // By making the application deal with the creation of the 'application' class
+    // we allow easy porting to platforms that have other frameworks / entry points other than 'main'.
+    // For example Android.
     MyUI* theUI = new MyUI(path); // MyUI is your derived application class.
     eui::Application::MainLoop(theUI);
     delete theUI;
